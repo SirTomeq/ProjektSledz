@@ -1,0 +1,14 @@
+base
+knitr
+EDAWR
+dplyr
+lattice
+ggplot2
+caret
+Rcpp
+mice
+plotly
+survival
+Formula
+Hmisc
+randomForest
