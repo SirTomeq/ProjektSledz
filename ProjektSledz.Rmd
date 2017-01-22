@@ -1,14 +1,24 @@
 ---
 title: "Analiza problemu coraz krótszego œledzia oceanicznego."
 author: "Tomasz Krzy¿kowski [106466]"
-date: "19 stycznia 2017"
+date: "22 stycznia 2017"
+always_allow_html: yes
 output:
+  md_document:
+    toc: yes
+    toc_depth: 2
+    variant: markdown_github
   html_document:
+    depth: 2
+    highlight: tango
+    number_sections: yes
+    theme: united
     toc: yes
 ---
 
 
 ### 1. Podsumowanie
+Analiza problemu coraz krótszego œledzia by³a z³o¿ona. Po wczytaniu danych, uzupe³niono brakuj¹ce wartoœci. Zdecydowano siê na przewidywanie wartoœci przez algorytm random forest. Dobór parametrów by³ empiryczno-losowy. Przy zmianie liczby powtórzeñ oceny krzy¿owej, czy wartoœci mtry lub seeda ranking wa¿noœci atrybutów potrafi³ siê zmieniæ diametralnie. Ostatecznie   
 
 ### 2. Wykorzystane biblioteki
 
@@ -309,7 +319,50 @@ ggplot(sledzie, aes(length, sst)) + labs(title="Korelacja zmiennych length i sst
     geom_smooth()
 ```
 
-### 8. Przedmiot analizy
+### 8. Zmiany atrybutów w czasie
+```{r zmiany_atrybutow, include=TRUE, cache=TRUE}
+ggplot(data = sledzie, aes(x = sledzie$X, y = sledzie$cfin1)) + labs(title="Zmiana atrybutu cfin1") + labs(x="Pomiar", y="Cfin1") +
+  geom_point() + geom_smooth()
+
+ggplot(data = sledzie, aes(x = sledzie$X, y = sledzie$cfin2)) + labs(title="Zmiana atrybutu cfin2") + labs(x="Pomiar", y="Cfin2") +
+  geom_point() + geom_smooth()
+
+ggplot(data = sledzie, aes(x = sledzie$X, y = sledzie$chel1)) + labs(title="Zmiana atrybutu chel1") + labs(x="Pomiar", y="chel1") +
+  geom_point() + geom_smooth()
+
+ggplot(data = sledzie, aes(x = sledzie$X, y = sledzie$chel2)) + labs(title="Zmiana atrybutu chel2") + labs(x="Pomiar", y="chel2") +
+  geom_point() + geom_smooth()
+
+ggplot(data = sledzie, aes(x = sledzie$X, y = sledzie$lcop1)) + labs(title="Zmiana atrybutu lcop1") + labs(x="Pomiar", y="lcop1") +
+  geom_point() + geom_smooth()
+
+ggplot(data = sledzie, aes(x = sledzie$X, y = sledzie$lcop2)) + labs(title="Zmiana atrybutu lcop2") + labs(x="Pomiar", y="lcop2") +
+  geom_point() + geom_smooth()
+
+ggplot(data = sledzie, aes(x = sledzie$X, y = sledzie$fbar)) + labs(title="Zmiana atrybutu fbar") + labs(x="Pomiar", y="fbar") +
+  geom_point() + geom_smooth()
+
+ggplot(data = sledzie, aes(x = sledzie$X, y = sledzie$recr)) + labs(title="Zmiana atrybutu recr") + labs(x="Pomiar", y="recr") +
+  geom_point() + geom_smooth()
+
+ggplot(data = sledzie, aes(x = sledzie$X, y = sledzie$cumf)) + labs(title="Zmiana atrybutu cumf") + labs(x="Pomiar", y="cumf") +
+  geom_point() + geom_smooth()
+
+ggplot(data = sledzie, aes(x = sledzie$X, y = sledzie$totaln)) + labs(title="Zmiana atrybutu totaln") + labs(x="Pomiar", y="totaln") +
+  geom_point() + geom_smooth()
+
+ggplot(data = sledzie, aes(x = sledzie$X, y = sledzie$sst)) + labs(title="Zmiana atrybutu sst") + labs(x="Pomiar", y="sst") +
+  geom_point() + geom_smooth()
+
+ggplot(data = sledzie, aes(x = sledzie$X, y = sledzie$sal)) + labs(title="Zmiana atrybutu sal") + labs(x="Pomiar", y="sal") +
+  geom_point() + geom_smooth()
+
+ggplot(data = sledzie, aes(x = sledzie$X, y = sledzie$nao)) + labs(title="Zmiana atrybutu nao") + labs(x="Pomiar", y="nao") +
+  geom_point() + geom_smooth()
+
+```
+
+### 9. Przedmiot analizy
 ```{r wykres, include=TRUE, cache=TRUE}
 set.seed(100)
 wykres <- ggplot(data = sledzie, aes(x = sledzie$X, y = sledzie$length)) + labs(title="Zmiana d³ugoœci œledzi w czasie") + labs(x="Pomiar", y="D³ugoœæ") +
@@ -319,8 +372,8 @@ ggplotly(wykres)
 ```
 
 
-### 9. Przewidywanie d³ugoœci œledzi
-Do przewidzenia d³ugoœci œledzi zastosowano metodê random forest. Podzielono zbiór danych na treningowy i testowy. Dane treningowe zajmowa³y 75% wszysktich rekordów. Do stworzenia modelu wykorzystano powtórzon¹ ocenê krzy¿ow¹ o parametrach podzia³u na 2 podzbiory i 8 powtórzeniach. Dodatkowo optymalizacja atrybutów mia³a ulepszaæ miarê RMSE. 
+### 10. Przewidywanie d³ugoœci œledzi
+Do przewidzenia d³ugoœci œledzi zastosowano metodê random forest. Podzielono zbiór danych na treningowy i testowy. Dane treningowe zajmowa³y 75% wszysktich rekordów. Do stworzenia modelu wykorzystano powtórzon¹ ocenê krzy¿ow¹ o parametrach podzia³u na 2 podzbiory i 5 powtórzeniach. Dodatkowo optymalizacja atrybutów mia³a ulepszaæ miarê RMSE. 
 
 ```{r predykcja}
 set.seed(233)
@@ -353,9 +406,16 @@ predict <- predict(fit, newdata=testing)
 values <- data.frame(obs = testing$length, pred=predict)
 defaultSummary(values)
 
+ggplot(data = values, aes(x = row.names(values), y = values$obs)) + labs(title="Zmiana d³ugoœci œledzi w czasie zbiór testowy") + labs(x="Pomiar", y="D³ugoœæ") +
+  geom_point() + geom_smooth()
+
+ggplot(data = values, aes(x = row.names(values), y = values$pred)) + labs(title="Zmiana d³ugoœci œledzi w czasie predykcja") + labs(x="Pomiar", y="D³ugoœæ") +
+  geom_point() + geom_smooth()
 ```
 
-### 10. Rozwi¹zanie problemu
+### 11. Rozwi¹zanie problemu
+Zgodnie z parametrami algorytmu regresji wynika, ¿e najwiêkszy udzia³ ma zmienna cumf, czyli ³¹czne roczne natê¿enie po³owów. Zmienna ta jest o tyle zaskakuj¹ca, ¿e przy wyliczaniu korelacji z atrybutem length mia³a wartoœæ 0.01. Drug¹ co do wa¿noœci zmienn¹ jest sst, czyli liczba stopni przy powierzchni wody. Wydaje siê, ¿e to jest bardziej prawdopodobne i ma potwierdzenie w korelacji ze zmienn¹ length. Niestety dla algorytmu regresji random forest, rozk³ad udzia³u poszczególnych atrybutów jest bardzo zmienny. W zale¿noœci od wartoœci parametrów tj. liczby powtórzeñ w algorytmie oceny krzy¿owej, czy zmeinnej mtry, a tak¿e ustawionego seeda, ranking widocznie siê zmienia³, przy zbli¿onych wartoœciach miary RMSE.
+</br>
 ```{r odpowiedz}
 i <- varImp(fit)
 variables <- row.names(i$importance)
