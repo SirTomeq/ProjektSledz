@@ -1,0 +1,373 @@
+---
+title: "Analiza problemu coraz krótszego œledzia oceanicznego."
+author: "Tomasz Krzy¿kowski [106466]"
+date: "19 stycznia 2017"
+output:
+  html_document:
+    toc: yes
+---
+
+
+### 1. Podsumowanie
+
+### 2. Wykorzystane biblioteki
+
+```{r zaladuj_biblioteki, message=FALSE, warning=FALSE}
+library(ggplot2)
+library(plotly)
+library(knitr)
+library(EDAWR)
+library(dplyr)
+library(caret)
+library(Hmisc)
+library(randomForest)
+opts_chunk$set(echo=FALSE, message=FALSE, warning=FALSE)
+
+```
+
+### 3. Wczytywanie danych z pliku
+Podczas wczytywania danych ustawiono wykrywanie wartoœci brakuj¹cych na znak '?'. Dodatkowo przypisano poszczególne klasy danym atrybutom. Szczególnie istotne by³o to w przypadku zmiennej xmonth, która oznacza konkretny miesi¹c.
+
+Poni¿ej zamieszczono kod pobieraj¹cy dane do zmiennej 'sledzie'.
+```{r zaladuj_dane_z_pliku, echo=TRUE}
+sledzie <- read.csv("sledzie.csv", dec = ".", na.strings = "?", colClasses=c(rep('numeric', 9), rep('integer', 1), rep('numeric', 4), rep('factor', 1), rep('numeric', 1)))
+
+```
+
+### 4. Przetwarzanie brakuj¹cych danych
+Sprawdzono, ¿e kolumny zawieraj¹ce wartoœci brakuj¹ce to: cfin1, cfin2, chel1, chel2, lcop1, lcop2, sst. Zauwa¿ono, ¿e dla jednej wartoœci totaln ww. atrybuty maj¹ te same wartoœci. Wykorzystano to spostrze¿enie do utworzenia tabeli pomocniczej, w której oszacowano brakuj¹ce dane. Algorytm wyznaczania brakuj¹cej wartoœci grupuje tabelê po zmiennej totaln i dla ka¿dej grupy tworzy rekord w tabeli pomocniczej z medianami kolejnych argumentów. 
+
+Nastêpnie dla ka¿dego z argumentu wyznaczano krotki z brakuj¹cymi wartoœciami i dla ka¿dej takiej pozycji przypisywano wartoœæ z tabeli pomocniczej.
+
+Poni¿ej kod przedstawiaj¹cy stworzenie tabeli pomocniczej.
+```{r tabela_pomocnicza_usun_na, echo=TRUE, cache=TRUE}
+# Tabela pomocnicza z median¹ wartoœci poszczególnych atrybutów dla ka¿dej grupy totaln
+tmpTable <- sledzie %>% group_by(totaln) %>% arrange(totaln) %>% summarise( cfin1 = median(cfin1, na.rm = TRUE), cfin2 = median(cfin2, na.rm = TRUE), chel1 = median(chel1, na.rm = TRUE), chel2 = median(chel2, na.rm = TRUE), lcop1 = median(lcop1, na.rm = TRUE), lcop2 = median(lcop2, na.rm = TRUE), sst = median(sst, na.rm = TRUE)) 
+```
+
+Dalej na przyk³adzie zmiennej CFIN1 uzupe³nienie brakuj¹cych wartoœci
+```{r uzupelnienie_cfin_usun_NA, echo=TRUE, cache=TRUE}
+# Uzupe³nienie CFIN1
+a<-sledzie %>% select(X, cfin1, totaln) %>% filter(is.na(cfin1))
+for(i in 1:length(a[,1])){
+    sledzie$cfin1[a$X[i]+1] <- as.numeric(tmpTable %>%   filter(totaln==sledzie$totaln[a$X[i]+1]) %>% select(cfin1))
+}
+```
+Pozosta³e atrybuty zosta³y uzupe³nione w analogiczny sposób. 
+
+```{r pozostale_tabele_usun_NA, cache=TRUE}
+# Uzupe³nienie CFIN2
+a<-sledzie %>% select(X, cfin2, totaln) %>% filter(is.na(cfin2))
+for(i in 1:length(a[,1])){
+    sledzie$cfin2[a$X[i]+1] <- as.numeric(tmpTable %>%   filter(totaln==sledzie$totaln[a$X[i]+1]) %>% select(cfin2))
+}
+
+# Uzupe³nienie CHEL1
+a<-sledzie %>% select(X, chel1, totaln) %>% filter(is.na(chel1))
+for(i in 1:length(a[,1])){
+    sledzie$chel1[a$X[i]+1] <- as.numeric(tmpTable %>%   filter(totaln==sledzie$totaln[a$X[i]+1]) %>% select(chel1))
+}
+
+# Uzupe³nienie CHEL2
+a<-sledzie %>% select(X, chel2, totaln) %>% filter(is.na(chel2))
+for(i in 1:length(a[,1])){
+    sledzie$chel2[a$X[i]+1] <- as.numeric(tmpTable %>%   filter(totaln==sledzie$totaln[a$X[i]+1]) %>% select(chel2))
+}
+
+# Uzupe³nienie LCOP1
+a<-sledzie %>% select(X, lcop1, totaln) %>% filter(is.na(lcop1))
+for(i in 1:length(a[,1])){
+    sledzie$lcop1[a$X[i]+1] <- as.numeric(tmpTable %>%   filter(totaln==sledzie$totaln[a$X[i]+1]) %>% select(lcop1))
+}
+
+# Uzupe³nienie LCOP2
+a<-sledzie %>% select(X, lcop2, totaln) %>% filter(is.na(lcop2))
+for(i in 1:length(a[,1])){
+    sledzie$lcop2[a$X[i]+1] <- as.numeric(tmpTable %>%   filter(totaln==sledzie$totaln[a$X[i]+1]) %>% select(lcop2))
+}
+
+# Uzupe³nienie SST
+a<-sledzie %>% select(X, sst, totaln) %>% filter(is.na(sst))
+for(i in 1:length(a[,1])){
+    sledzie$sst[a$X[i]+1] <- as.numeric(tmpTable %>%   filter(totaln==sledzie$totaln[a$X[i]+1]) %>% select(sst))
+}
+
+```
+
+
+### 5. Statystyki zbioru
+Zbiór posiada 52.582 pozycji.
+Ka¿da pozycja okreœlona jest zbiorem atrybutów, których podstawowe dane przedstawiono w tabeli.
+```{r ladowanie_bibliotek, cache=TRUE}
+kable(summary(sledzie))
+
+```
+
+
+### 6. Analiza atrybutów
+```{r analiza_atrybutow_length, cache=TRUE}
+
+# Histogram rozk³adu atrybutu LENGTH
+ggplot(data=sledzie, aes(sledzie$length)) +
+  geom_histogram(bins=10,
+                 col="red",
+                 fill="green",
+                 alpha = .2) +
+  labs(title="Rozk³ad zmiennej length") +
+  labs(x="D³ugoœæ œledzi [cm]", y="Liczba wyst¹pieñ")
+```
+
+```{r analiza_atrybutow_cfin1, cache=TRUE}
+
+# Histogram rozk³adu atrybutu CFIN1
+ggplot(data=sledzie, aes(sledzie$cfin1)) +
+  geom_histogram(bins=10,
+                 col="red",
+                 fill="green",
+                 alpha = .2) +
+  labs(title="Rozk³ad zmiennej cfin1") +
+  labs(x="Dostêpnoœæ planktonu cfin1", y="Liczba wyst¹pieñ")
+```
+
+```{r analiza_atrybutow_cfin2, cache=TRUE}
+# Histogram atrybutu CFIN2
+ggplot(data=sledzie, aes(sledzie$cfin2)) +
+  geom_histogram(bins=10,
+                 col="red",
+                 fill="green",
+                 alpha = .2) +
+  labs(title="Rozk³ad zmiennej cfin2") +
+  labs(x="Dostêpnoœæ planktonu cfin2", y="Liczba wyst¹pieñ")
+```
+
+```{r analiza_atrybutow_cheli1, cache=TRUE}
+# Histogram atrybutu CHEL1
+ggplot(data=sledzie, aes(sledzie$chel1)) +
+  geom_histogram(bins=10,
+                 col="red",
+                 fill="green",
+                 alpha = .2) +
+  labs(title="Rozk³ad zmiennej chel1") +
+  labs(x="Dostêpnoœæ planktonu chel1", y="Liczba wyst¹pieñ")
+```
+
+```{r analiza_atrybutow_cheli2, cache=TRUE}
+# Histogram atrybutu CHEL2
+ggplot(data=sledzie, aes(sledzie$chel2)) +
+  geom_histogram(bins=10,
+                 col="red",
+                 fill="green",
+                 alpha = .2) +
+  labs(title="Rozk³ad zmiennej chel2") +
+  labs(x="Dostêpnoœæ planktonu chel2", y="Liczba wyst¹pieñ")
+```
+
+```{r analiza_atrybutow_lcop1, cache=TRUE}
+# Histogram atrybutu LCOP1
+ggplot(data=sledzie, aes(sledzie$lcop1)) +
+  geom_histogram(bins=10,
+                 col="red",
+                 fill="green",
+                 alpha = .2) +
+  labs(title="Rozk³ad zmiennej lcop1") +
+  labs(x="Dostêpnoœæ planktonu lcop1", y="Liczba wyst¹pieñ")
+```
+
+```{r analiza_atrybutow_lcop2, cache=TRUE}
+# Histogram atrybutu LCOP2
+ggplot(data=sledzie, aes(sledzie$lcop2)) +
+  geom_histogram(bins=10,
+                 col="red",
+                 fill="green",
+                 alpha = .2) +
+  labs(title="Rozk³ad zmiennej lcop2") +
+  labs(x="Dostêpnoœæ planktonu lcop2", y="Liczba wyst¹pieñ")
+```
+
+```{r analiza_atrybutow_fbar, cache=TRUE}
+# Histogram atrybutu FBAR
+ggplot(data=sledzie, aes(sledzie$fbar)) +
+  geom_histogram(bins=10,
+                 col="red",
+                 fill="green",
+                 alpha = .2) +
+  labs(title="Rozk³ad zmiennej fbar") +
+  labs(x="Natê¿enie po³owów", y="Liczba wyst¹pieñ")
+```
+
+```{r analiza_atrybutow_recr, cache=TRUE}
+# Histogram atrybutu RECR
+ggplot(data=sledzie, aes(sledzie$recr)) +
+  geom_histogram(bins=10,
+                 col="red",
+                 fill="green",
+                 alpha = .2) +
+  labs(title="Rozk³ad zmiennej recr") +
+  labs(x="Roczny narybek", y="Liczba wyst¹pieñ")
+```
+
+```{r analiza_atrybutow_cumf, cache=TRUE}
+# Histogram atrybutu cumf
+ggplot(data=sledzie, aes(sledzie$cumf)) +
+  geom_histogram(bins=10,
+                 col="red",
+                 fill="green",
+                 alpha = .2) +
+  labs(title="Rozk³ad zmiennej cumf") +
+  labs(x="Roczne natê¿enie po³owów", y="Liczba wyst¹pieñ")
+```
+
+```{r analiza_atrybutow_totaln, cache=TRUE}
+# Histogram atrybutu TOTALN
+ggplot(data=sledzie, aes(sledzie$totaln)) +
+  geom_histogram(bins=10,
+                 col="red",
+                 fill="green",
+                 alpha = .2) +
+  labs(title="Rozk³ad zmiennej totaln") +
+  labs(x="Liczba ryb w ramach po³owu", y="Liczba wyst¹pieñ")
+```
+
+```{r analiza_atrybutow_sst, cache=TRUE}
+# Histogram atrybutu SST
+ggplot(data=sledzie, aes(sledzie$sst)) +
+  geom_histogram(bins=10,
+                 col="red",
+                 fill="green",
+                 alpha = .2) +
+  labs(title="Rozk³ad zmiennej sst") +
+  labs(x="Temperatura przy powierzchni wody [°C]", y="Liczba wyst¹pieñ")
+
+```
+
+```{r analiza_atrybutow_sal, cache=TRUE}
+# Histogram atrybutu SAL
+ggplot(data=sledzie, aes(sledzie$sal)) +
+  geom_histogram(bins=10,
+                 col="red",
+                 fill="green",
+                 alpha = .2) +
+  labs(title="Rozk³ad zmiennej sal") +
+  labs(x="Poziom zasolenia wody [ppt]", y="Liczba wyst¹pieñ")
+
+```
+
+```{r analiza_atrybutow_xmonth, cache=TRUE}
+# Histogram atrybutu XMONTH
+ggplot(data=sledzie, aes(sledzie$xmonth)) +
+  geom_histogram(stat ="count", bins = 10,
+                 col="red",
+                 fill="green",
+                 alpha = .2) +
+  labs(title="Rozk³ad zmiennej xmonth") +
+  labs(x="Miesi¹c po³owu", y="Liczba wyst¹pieñ")
+
+```
+
+```{r analiza_atrybutow_nao, cache=TRUE}
+# Histogram atrybutu NAO
+ggplot(data=sledzie, aes(sledzie$nao)) +
+  geom_histogram(bins=10,
+                 col="red",
+                 fill="green",
+                 alpha = .2) +
+  labs(title="Rozk³ad zmiennej nao") +
+  labs(x="Oscylacja pó³nocnoatlantycka [mb]", y="Liczba wyst¹pieñ")
+
+```
+
+
+### 7. Zale¿noœci miêdzy zmiennymi
+```{r korelacja_atrybutow, include=FALSE, cache=TRUE}
+korelacja <-rcorr(as.matrix(sledzie))
+```
+W tym punkcie zostan¹ przedstawione wykresy z zale¿noœci miêdzy zmiennymi. Badanie korelacji podzielono na dwa obszary:
+</br>
+a) korelacja miêdzy wszystkimi atrybutami - przedstawiono wykresy dla najbardziej zale¿nych wartoœci
+```{r korelacja_atrybutow_lcop1_chel1, include=TRUE, cache=TRUE}
+ggplot(sledzie, aes(lcop1, chel1)) + labs(title="Korelacja zmiennych lcop1 i chel1 0.95") + geom_point() + 
+    geom_smooth()
+```
+
+```{r korelacja_atrybutow_lcop2_chel2, include=TRUE, cache=TRUE}
+ggplot(sledzie, aes(lcop2, chel2)) + labs(title="Korelacja zmiennych lcop2 i chel2 0.89") + geom_point() + 
+    geom_smooth(method=lm)
+```
+```{r korelacja_atrybutow_fbar, include=TRUE, cache=TRUE}
+ggplot(sledzie, aes(fbar, cumf)) + labs(title="Korelacja zmiennych fbar i cumf 0.82") + geom_point() + 
+    geom_smooth()
+```
+
+```{r korelacja_atrybutow_totaln_cumf, include=TRUE, cache=TRUE}
+ggplot(sledzie, aes(totaln, cumf)) + labs(title="Korelacja zmiennych totaln i cumf +0.71") + geom_point() + 
+    geom_smooth(method=lm)
+```
+</br></br>
+b) korelacja atrybutów z rozpatrywan¹ zmienn¹ d³ugoœci œledzi - W tym przypadku okaza³o siê, ¿e zmienna length najbardziej skorelowana jest z sst (-0.45), nastêpnie z nao(-0.26), fbar(0.25), lcop1(0.24), chel1(0.22)
+```{r korelacja_atrybutow_length_sst, include=TRUE}
+ggplot(sledzie, aes(length, sst)) + labs(title="Korelacja zmiennych length i sst -0.45") + geom_point() + 
+    geom_smooth()
+```
+
+### 8. Przedmiot analizy
+```{r wykres, include=TRUE, cache=TRUE}
+set.seed(100)
+wykres <- ggplot(data = sledzie, aes(x = sledzie$X, y = sledzie$length)) + labs(title="Zmiana d³ugoœci œledzi w czasie") + labs(x="Pomiar", y="D³ugoœæ") +
+  geom_point() + geom_smooth()
+ggplotly(wykres)
+
+```
+
+
+### 9. Przewidywanie d³ugoœci œledzi
+Do przewidzenia d³ugoœci œledzi zastosowano metodê random forest. Podzielono zbiór danych na treningowy i testowy. Dane treningowe zajmowa³y 75% wszysktich rekordów. Do stworzenia modelu wykorzystano powtórzon¹ ocenê krzy¿ow¹ o parametrach podzia³u na 2 podzbiory i 8 powtórzeniach. Dodatkowo optymalizacja atrybutów mia³a ulepszaæ miarê RMSE. 
+
+```{r predykcja}
+set.seed(233)
+  inTraining <- 
+    createDataPartition(
+      y = sledzie$length,
+      p = .75,
+      list = FALSE)
+  
+  training <- sledzie[ inTraining,]
+  testing  <- sledzie[-inTraining,]
+
+rfGrid <- expand.grid(mtry = 5)
+ctrl <- trainControl(
+  method = "repeatedcv",
+    number = 2,
+    repeats = 5)
+
+set.seed(239)
+fit <- train(length ~ cfin1 + cfin2 + chel1 + chel2 + lcop1 + lcop2 + fbar + recr + cumf + totaln + sst + sal + nao,
+             data = training,
+             method = "rf",
+             metric = "RMSE",
+             preProc = c("center", "scale"),
+             trControl = ctrl,
+             importance = TRUE,
+             ntree = 10)
+
+predict <- predict(fit, newdata=testing)
+values <- data.frame(obs = testing$length, pred=predict)
+defaultSummary(values)
+
+```
+
+### 10. Rozwi¹zanie problemu
+```{r odpowiedz}
+i <- varImp(fit)
+variables <- row.names(i$importance)
+importance <- i$importance$Overall
+
+ggplot(i, aes(x = reorder(variables, importance), 
+    y = importance, fill = importance)) +
+  geom_bar(stat='identity') +
+  labs(title="Rozk³ad udzia³u poszczególnych atrybutów na d³ugoœæ œledzi.")+
+  labs(x = 'Atrybuty', y="Wa¿noœæ") +
+  coord_flip()
+
+```
+
+
