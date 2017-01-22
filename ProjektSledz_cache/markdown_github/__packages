@@ -1,0 +1,12 @@
+base
+ggplot2
+plotly
+knitr
+EDAWR
+dplyr
+lattice
+caret
+survival
+Formula
+Hmisc
+randomForest

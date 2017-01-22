@@ -2,25 +2,28 @@
 title: "Analiza problemu coraz krótszego œledzia oceanicznego."
 author: "Tomasz Krzy¿kowski [106466]"
 date: "22 stycznia 2017"
-always_allow_html: yes
 output:
-  md_document:
-    toc: yes
-    toc_depth: 2
-    variant: markdown_github
   html_document:
     depth: 2
     highlight: tango
     number_sections: yes
     theme: united
     toc: yes
+  md_document:
+    toc: yes
+    toc_depth: 2
+    variant: markdown_github
+always_allow_html: yes
 ---
 
 
-### 1. Podsumowanie
-Analiza problemu coraz krótszego œledzia by³a z³o¿ona. Po wczytaniu danych, uzupe³niono brakuj¹ce wartoœci. Zdecydowano siê na przewidywanie wartoœci przez algorytm random forest. Dobór parametrów by³ empiryczno-losowy. Przy zmianie liczby powtórzeñ oceny krzy¿owej, czy wartoœci mtry lub seeda ranking wa¿noœci atrybutów potrafi³ siê zmieniæ diametralnie. Ostatecznie   
+### Podsumowanie
+Analiza problemu coraz krótszego œledzia by³a z³o¿ona. Po wczytaniu danych, uzupe³niono brakuj¹ce wartoœci. Zdecydowano siê na przewidywanie wartoœci przez algorytm random forest. Dobór parametrów by³ empiryczno-losowy. Przy zmianie liczby powtórzeñ oceny krzy¿owej, czy wartoœci mtry lub seeda ranking wa¿noœci atrybutów potrafi³ siê zmieniæ diametralnie, przy zbli¿onej wartoœci miary RMSE. </br></br>
+Próbuj¹c odpowiedzieæ na pytanie dlaczego œledŸ oceaniczny jest coraz krótszy porównano zmiany atrybutów w czasie oraz ranking zgodny z algorytmem predykcji.
+</br></br>
+Spadaj¹ce pocz¹tkowo natê¿enie po³owów œledzi, temeratura przy powierzchni wody, a tak¿e oscylacja pó³nocnoatlantycka sprzyja³y wzrostowi œledzia oceanicznego, a tak¿e dostêpnoœci glonów Calanus helgolandicus oraz wid³onogów gatunku pierwszego. Przy wzroœcie po³owów oraz temperatury przy powierzchni wody sytuacja zaczê³a siê zmieniaæ. Zarówno liczba zagêszczenia wspomnianych planktonów, jak i d³ugoœæ œledzi zaczê³a spadaæ. 
 
-### 2. Wykorzystane biblioteki
+### Wykorzystane biblioteki
 
 ```{r zaladuj_biblioteki, message=FALSE, warning=FALSE}
 library(ggplot2)
@@ -35,7 +38,7 @@ opts_chunk$set(echo=FALSE, message=FALSE, warning=FALSE)
 
 ```
 
-### 3. Wczytywanie danych z pliku
+### Wczytywanie danych z pliku
 Podczas wczytywania danych ustawiono wykrywanie wartoœci brakuj¹cych na znak '?'. Dodatkowo przypisano poszczególne klasy danym atrybutom. Szczególnie istotne by³o to w przypadku zmiennej xmonth, która oznacza konkretny miesi¹c.
 
 Poni¿ej zamieszczono kod pobieraj¹cy dane do zmiennej 'sledzie'.
@@ -44,7 +47,7 @@ sledzie <- read.csv("sledzie.csv", dec = ".", na.strings = "?", colClasses=c(rep
 
 ```
 
-### 4. Przetwarzanie brakuj¹cych danych
+### Przetwarzanie brakuj¹cych danych
 Sprawdzono, ¿e kolumny zawieraj¹ce wartoœci brakuj¹ce to: cfin1, cfin2, chel1, chel2, lcop1, lcop2, sst. Zauwa¿ono, ¿e dla jednej wartoœci totaln ww. atrybuty maj¹ te same wartoœci. Wykorzystano to spostrze¿enie do utworzenia tabeli pomocniczej, w której oszacowano brakuj¹ce dane. Algorytm wyznaczania brakuj¹cej wartoœci grupuje tabelê po zmiennej totaln i dla ka¿dej grupy tworzy rekord w tabeli pomocniczej z medianami kolejnych argumentów. 
 
 Nastêpnie dla ka¿dego z argumentu wyznaczano krotki z brakuj¹cymi wartoœciami i dla ka¿dej takiej pozycji przypisywano wartoœæ z tabeli pomocniczej.
@@ -105,7 +108,7 @@ for(i in 1:length(a[,1])){
 ```
 
 
-### 5. Statystyki zbioru
+### Statystyki zbioru
 Zbiór posiada 52.582 pozycji.
 Ka¿da pozycja okreœlona jest zbiorem atrybutów, których podstawowe dane przedstawiono w tabeli.
 ```{r ladowanie_bibliotek, cache=TRUE}
@@ -114,7 +117,7 @@ kable(summary(sledzie))
 ```
 
 
-### 6. Analiza atrybutów
+### Analiza atrybutów
 ```{r analiza_atrybutow_length, cache=TRUE}
 
 # Histogram rozk³adu atrybutu LENGTH
@@ -287,7 +290,7 @@ ggplot(data=sledzie, aes(sledzie$nao)) +
 ```
 
 
-### 7. Zale¿noœci miêdzy zmiennymi
+### Zale¿noœci miêdzy zmiennymi
 ```{r korelacja_atrybutow, include=FALSE, cache=TRUE}
 korelacja <-rcorr(as.matrix(sledzie))
 ```
@@ -319,7 +322,7 @@ ggplot(sledzie, aes(length, sst)) + labs(title="Korelacja zmiennych length i sst
     geom_smooth()
 ```
 
-### 8. Zmiany atrybutów w czasie
+### Zmiany atrybutów w czasie
 ```{r zmiany_atrybutow, include=TRUE, cache=TRUE}
 ggplot(data = sledzie, aes(x = sledzie$X, y = sledzie$cfin1)) + labs(title="Zmiana atrybutu cfin1") + labs(x="Pomiar", y="Cfin1") +
   geom_point() + geom_smooth()
@@ -362,7 +365,7 @@ ggplot(data = sledzie, aes(x = sledzie$X, y = sledzie$nao)) + labs(title="Zmiana
 
 ```
 
-### 9. Przedmiot analizy
+### Przedmiot analizy
 ```{r wykres, include=TRUE, cache=TRUE}
 set.seed(100)
 wykres <- ggplot(data = sledzie, aes(x = sledzie$X, y = sledzie$length)) + labs(title="Zmiana d³ugoœci œledzi w czasie") + labs(x="Pomiar", y="D³ugoœæ") +
@@ -372,7 +375,7 @@ ggplotly(wykres)
 ```
 
 
-### 10. Przewidywanie d³ugoœci œledzi
+### Przewidywanie d³ugoœci œledzi
 Do przewidzenia d³ugoœci œledzi zastosowano metodê random forest. Podzielono zbiór danych na treningowy i testowy. Dane treningowe zajmowa³y 75% wszysktich rekordów. Do stworzenia modelu wykorzystano powtórzon¹ ocenê krzy¿ow¹ o parametrach podzia³u na 2 podzbiory i 5 powtórzeniach. Dodatkowo optymalizacja atrybutów mia³a ulepszaæ miarê RMSE. 
 
 ```{r predykcja}
@@ -413,7 +416,7 @@ ggplot(data = values, aes(x = row.names(values), y = values$pred)) + labs(title=
   geom_point() + geom_smooth()
 ```
 
-### 11. Rozwi¹zanie problemu
+### Rozwi¹zanie problemu
 Zgodnie z parametrami algorytmu regresji wynika, ¿e najwiêkszy udzia³ ma zmienna cumf, czyli ³¹czne roczne natê¿enie po³owów. Zmienna ta jest o tyle zaskakuj¹ca, ¿e przy wyliczaniu korelacji z atrybutem length mia³a wartoœæ 0.01. Drug¹ co do wa¿noœci zmienn¹ jest sst, czyli liczba stopni przy powierzchni wody. Wydaje siê, ¿e to jest bardziej prawdopodobne i ma potwierdzenie w korelacji ze zmienn¹ length. Niestety dla algorytmu regresji random forest, rozk³ad udzia³u poszczególnych atrybutów jest bardzo zmienny. W zale¿noœci od wartoœci parametrów tj. liczby powtórzeñ w algorytmie oceny krzy¿owej, czy zmeinnej mtry, a tak¿e ustawionego seeda, ranking widocznie siê zmienia³, przy zbli¿onych wartoœciach miary RMSE.
 </br>
 ```{r odpowiedz}
